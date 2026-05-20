@@ -1,0 +1,36 @@
+# ==========================================
+# 1. Entorno Virtual y Dependencias de Python
+# ==========================================
+.venv/
+venv/
+ENV/
+env/
+bin/
+lib/
+lib64/
+include/
+pyvenv.cfg
+.env
+.env.*
+*.local
+credentials.json
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+descargas/
+*.xlsx
+*.xlsm
+*.xls
+*.csv
+*.zip
+*.rar
+logs/
+*.log
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
