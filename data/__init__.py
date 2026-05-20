@@ -1,5 +1,8 @@
 from .db import engine, iniciar_bd, obtener_sesion
 
+# URLS globales
+from .constants import URLS_CATALOGOS
+
 # Modelos Demograficos
 from .demografia import LenguaIndigena, Religion, Formacion, Nacionalidad 
 
