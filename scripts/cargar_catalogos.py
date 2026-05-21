@@ -36,6 +36,13 @@ def orquestador(carpeta_origen: str = "descargas"):
         log.warning("No se encontraron archivos para procesar en disco.")
         return
 
+    prioridad = {
+        'entidad_federativa_origen.xlsx': 1,
+        'municipio_origen.xlsx': 2,
+        'localidades_origen.xlsx': 3
+    }
+    archivos_a_procesar = sorted(archivos_a_procesar, key=lambda x: prioridad.get(os.path.basename(x), 99))
+
     for ruta_archivo in archivos_a_procesar:
         nombre_corto = os.path.basename(ruta_archivo)
         log.info(f"Procesando: {nombre_corto}")
@@ -67,4 +74,3 @@ def orquestador(carpeta_origen: str = "descargas"):
 
 if __name__ == "__main__":
      orquestador()
-
