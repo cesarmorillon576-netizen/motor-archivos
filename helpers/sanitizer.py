@@ -20,9 +20,19 @@ def normalizar_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         return df
 
     log.info("Limpiando columnas...")
-
     df.columns = [limpiar_nombre_columna(col) for col in df.columns]
+    columnas_llave = ['catalog_key', 'codigo_pais', 'clave_familia', 'efe_key', 'mun_key']
     
+    for col in columnas_llave:
+        if col in df.columns:
+            df[col] = df[col].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+
+    if 'procategoria' in df.columns:
+        df['procategoria'] = df['procategoria'].fillna('SIN CATEGORIA')
+
+    if 'nivel' in df.columns:
+        df['nivel'] = df['nivel'].fillna(0).astype(int)
+
     df = df.where(pd.notnull(df), None)
 
     log.info(f"Dataframe normalizado. Columnas resultantes: {list(df.columns)}")

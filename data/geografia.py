@@ -27,7 +27,8 @@ class CodigoPostal(SQLModel, table = True):
     codigo_postal: str
 
 # TODO: Solucionar tabla
-class CLUES(SQLModel, table = True):
-    __tablename__ = "clues"
+# class CLUES(SQLModel, table = True):
+#    __tablename__ = "clues"
+
     
     

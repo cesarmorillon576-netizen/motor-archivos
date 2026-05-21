@@ -2,7 +2,7 @@ from sqlmodel import create_engine, Session, SQLModel
 from .config import settings
 
 DB_URL = (
-    f"postgresql://{settings.DB_USR}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+    f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
 )
 
 engine = create_engine(DB_URL, echo=False)
