@@ -49,7 +49,6 @@ class Diagnostico(SQLModel, table=True):
     valido_afeccion_principal: bool = Field(default=False)
     valido_causa_basica_defuncion: bool = Field(default=False)
 
-    # Restricciones demográficas — plain str avoids PostgreSQL enum type complexity
     restriccion_sexo: str = Field(default=RestriccionSexo.AMBOS.value)
     edad_min_valor: Optional[int] = Field(default=None)
     edad_min_unidad: Optional[str] = Field(default=None)
@@ -87,6 +86,7 @@ class Procedimiento(SQLModel, table=True):
     edad_max_unidad: Optional[str] = Field(default=None)
 
 
+# TODO: esto hay que verlo porque esta rarillo
 # ── LOINC (Regenstrief) ─────────────────────────────────────────────
 class LoincScale(str, Enum):
     QUANTITATIVE = "Qn"

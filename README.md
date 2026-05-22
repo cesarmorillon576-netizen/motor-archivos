@@ -18,12 +18,7 @@ El backend NestJS es dueño del esquema de la base de datos. Este subsistema **s
 ## Requisitos
 
 - Python 3.12+
-- PostgreSQL 14+
-- Las dependencias del `requirements.txt`
-
-```bash
-pip install -r requirements.txt
-```
+- PostgreSQL 14+ (puede estar en otro servidor; solo necesitas las credenciales)
 
 | Paquete | Versión |
 |---|---|
@@ -37,9 +32,46 @@ pip install -r requirements.txt
 
 ---
 
-## Configuración
+## Instalación y uso
 
-Crea un archivo `.env` en la raíz del proyecto:
+### Linux (Ubuntu / Debian)
+
+#### 1. Instalar Python 3.12
+
+```bash
+sudo apt update
+sudo apt install -y python3.12 python3.12-venv python3.12-dev
+
+# Verificar
+python3.12 --version
+```
+
+#### 2. Clonar el repositorio
+
+```bash
+git clone <url-del-repo>
+cd motor_archivos
+```
+
+#### 3. Crear entorno virtual e instalar dependencias
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+
+# El prompt cambia a (.venv) — confirma que el entorno está activo
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+#### 4. Configurar variables de entorno
+
+```bash
+cp .env.example .env    # si existe, o créalo manualmente
+nano .env               # o cualquier editor de texto
+```
+
+Contenido del `.env`:
 
 ```env
 DB_USER=postgres
@@ -48,6 +80,168 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=nest_project
 ```
+
+#### 5. Ejecutar
+
+```bash
+python scripts/cargar_catalogos.py
+```
+
+Los logs aparecen en consola y en `logs/ejecucion.log`.
+
+> Para ejecutarlo sin activar el venv cada vez: `.venv/bin/python scripts/cargar_catalogos.py`
+
+---
+
+### macOS
+
+#### 1. Instalar Homebrew y Python 3.12
+
+```bash
+# Instalar Homebrew si no lo tienes
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Instalar Python 3.12
+brew install python@3.12
+
+# Verificar
+python3.12 --version
+```
+
+#### 2. Clonar el repositorio
+
+```bash
+git clone <url-del-repo>
+cd motor_archivos
+```
+
+#### 3. Crear entorno virtual e instalar dependencias
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+
+# El prompt cambia a (.venv)
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+> **Apple Silicon (M1/M2/M3):** si `psycopg2-binary` falla al instalar, ejecuta primero:
+> ```bash
+> brew install libpq
+> export LDFLAGS="-L/opt/homebrew/opt/libpq/lib"
+> export CPPFLAGS="-I/opt/homebrew/opt/libpq/include"
+> pip install psycopg2-binary
+> ```
+
+#### 4. Configurar variables de entorno
+
+```bash
+nano .env
+```
+
+Contenido del `.env`:
+
+```env
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=nest_project
+```
+
+#### 5. Ejecutar
+
+```bash
+python scripts/cargar_catalogos.py
+```
+
+Los logs aparecen en consola y en `logs/ejecucion.log`.
+
+---
+
+### Windows
+
+#### 1. Instalar Python 3.12
+
+1. Descarga el instalador desde **python.org/downloads** (versión 3.12.x, Windows installer 64-bit).
+2. Ejecuta el instalador y **marca** la opción **"Add Python to PATH"** antes de continuar.
+3. Verifica en PowerShell:
+
+```powershell
+python --version
+```
+
+#### 2. Clonar el repositorio
+
+```powershell
+git clone <url-del-repo>
+cd motor_archivos
+```
+
+#### 3. Crear entorno virtual e instalar dependencias
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+Si PowerShell bloquea la ejecución del script de activación:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+# Luego vuelve a activar:
+.venv\Scripts\Activate.ps1
+```
+
+Con el entorno activo (el prompt muestra `(.venv)`):
+
+```powershell
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+> Con `cmd` en lugar de PowerShell, la activación es `.venv\Scripts\activate.bat`.
+
+#### 4. Configurar variables de entorno
+
+Crea el archivo `.env` en la raíz del proyecto con cualquier editor de texto (Bloc de notas, VS Code, etc.):
+
+```env
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=nest_project
+```
+
+#### 5. Ejecutar
+
+```powershell
+python scripts\cargar_catalogos.py
+```
+
+Los logs aparecen en consola y en `logs\ejecucion.log`.
+
+> **Nota:** En Windows la primera ejecución puede tardar más por el antivirus al acceder a múltiples archivos `.xlsx` descargados.
+
+---
+
+## Ejecuciones posteriores
+
+Desde la segunda ejecución en adelante, el script solo descarga y procesa los catálogos cuyos archivos en el servidor oficial hayan cambiado (comparación SHA-256). Si ningún catálogo cambió, termina en segundos sin tocar la base de datos.
+
+```bash
+# Linux / macOS — activar el venv si no está activo
+source .venv/bin/activate
+python scripts/cargar_catalogos.py
+
+# Windows (PowerShell)
+.venv\Scripts\Activate.ps1
+python scripts\cargar_catalogos.py
+```
+
+> **Nota temporal:** `iniciar_bd()` crea las tablas automáticamente si no existen. Esto es solo para desarrollo local — en producción NestJS gestiona el esquema y esta llamada debe eliminarse.
 
 ---
 
@@ -58,6 +252,8 @@ python scripts/cargar_catalogos.py
 ```
 
 Eso es todo. El script detecta qué catálogos cambiaron, los descarga, los procesa y los carga. Si nada cambió desde la última ejecución, termina sin hacer nada.
+
+Los logs se escriben en consola y en `logs/ejecucion.log`.
 
 > **Nota temporal:** `iniciar_bd()` crea las tablas automáticamente si no existen. Esto es solo para desarrollo local — en producción NestJS gestiona el esquema y esta llamada debe eliminarse.
 

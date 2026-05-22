@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session
 from data.db import engine
@@ -34,12 +35,24 @@ def insertar_bd(ruta: str, batch_size: int = _BATCH_SIZE) -> int:
     model_cols = {c.name for c in tabla.columns}
 
     total = len(df)
-    log.info(f"Cargando {total} filas en tabla '{modelo.__tablename__}'...")
+    log.info(f"Comparando {total} filas contra '{modelo.__tablename__}'...")
+
+    df = _filtrar_cambiados(df, tabla, pk_cols, model_cols)
+    cambiados = len(df)
+
+    if cambiados == 0:
+        log.info(f"'{modelo.__tablename__}' ya está al día — sin cambios en datos")
+        return 0
+
+    if cambiados < total:
+        log.info(f"Diff: {cambiados} / {total} filas con cambios reales")
+    else:
+        log.info(f"Cargando {cambiados} filas nuevas en '{modelo.__tablename__}'")
 
     with Session(engine, autoflush=False) as session:
         try:
             insertados = 0
-            for i in range(0, total, batch_size):
+            for i in range(0, cambiados, batch_size):
                 lote = df.iloc[i : i + batch_size]
                 records = _lote_a_registros(lote, model_cols)
                 if not records:
@@ -68,6 +81,58 @@ def insertar_bd(ruta: str, batch_size: int = _BATCH_SIZE) -> int:
             session.rollback()
             log.error(f"Error al sincronizar '{modelo.__tablename__}': {e}")
             return 0
+
+
+def _filtrar_cambiados(
+    df: pd.DataFrame,
+    tabla,
+    pk_cols: set,
+    model_cols: set,
+) -> pd.DataFrame:
+    """
+    Devuelve solo las filas que son nuevas o cuyos valores difieren de la BD.
+    """
+    pk_list = sorted(pk_cols)
+    df_cols = [c for c in df.columns if c in model_cols]
+
+    try:
+        with engine.connect() as conn:
+            df_actual = pd.read_sql(
+                text(f'SELECT {", ".join(df_cols)} FROM {tabla.name}'),
+                conn,
+            )
+    except Exception:
+        return df  # tabla todavía no existe → primera carga completa
+
+    if df_actual.empty:
+        return df
+
+    h_nuevo = _hash_filas(df, df_cols)
+    h_actual = _hash_filas(df_actual, df_cols)
+
+    df_actual = df_actual[pk_list].copy()
+    df_actual["_h_db"] = h_actual.values
+
+    df_check = df[pk_list].copy()
+    df_check["_h"] = h_nuevo.values
+
+    merged = df_check.merge(df_actual, on=pk_list, how="left")
+    mask = merged["_h_db"].isna() | (merged["_h"] != merged["_h_db"])
+
+    return df[mask.values].reset_index(drop=True)
+
+
+def _hash_filas(df: pd.DataFrame, cols: list) -> pd.Series:
+    """
+    Hash vectorizado por fila usando pd.util.hash_pandas_object.
+    """
+    tmp = pd.DataFrame(index=df.index)
+    for col in cols:
+        s = df[col].fillna("").astype(str)
+        s = s.replace({"None": "", "nan": "", "<NA>": ""})
+        s = s.str.replace(r"\.0$", "", regex=True)
+        tmp[col] = s
+    return pd.util.hash_pandas_object(tmp, index=False)
 
 
 def _lote_a_registros(lote: pd.DataFrame, model_cols: set) -> list[dict]:

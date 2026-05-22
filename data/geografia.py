@@ -37,7 +37,7 @@ class CodigoPostal(SQLModel, table=True):
     c_mnpio: str = Field(primary_key=True)
     id_asenta_cpcons: str = Field(primary_key=True)
 
-    d_codigo: str = Field(index=True)        # código postal (puede ser compartido)
+    d_codigo: str = Field(index=True)       
     d_asenta: Optional[str] = Field(default=None)
     d_tipo_asenta: Optional[str] = Field(default=None)
     d_mnpio: Optional[str] = Field(default=None)
@@ -51,4 +51,4 @@ class CodigoPostal(SQLModel, table=True):
     c_cve_ciudad: Optional[str] = Field(default=None)
 
 
-# TODO: Modelo CLUES pendiente de análisis del esquema real (68 columnas).
+# TODO: Modelo CLUES pendiente de análisis.
