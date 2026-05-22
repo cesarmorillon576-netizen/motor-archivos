@@ -1,5 +1,7 @@
+import io
 import os
 import re
+import zipfile
 
 import pandas as pd
 
@@ -25,6 +27,32 @@ MAPEO_MODELOS = [
 ]
 
 
+def _parchear_xlsx(ruta_archivo: str) -> io.BytesIO:
+    """
+    Crea una copia en memoria del xlsx corrigiendo valores de font family > 14
+    que openpyxl rechaza aunque Excel los acepta sin problema.
+    """
+    buf_out = io.BytesIO()
+    _ARCHIVOS_CON_FAMILY = {"xl/sharedStrings.xml", "xl/styles.xml"}
+
+    def _clamp_family(text: str) -> str:
+        return re.sub(
+            r'(<family\b[^>]*\bval=")(\d+)(")',
+            lambda m: m.group(1) + str(min(int(m.group(2)), 14)) + m.group(3),
+            text,
+        )
+
+    with zipfile.ZipFile(ruta_archivo, "r") as zin, \
+         zipfile.ZipFile(buf_out, "w", zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename in _ARCHIVOS_CON_FAMILY:
+                data = _clamp_family(data.decode("utf-8")).encode("utf-8")
+            zout.writestr(item, data)
+    buf_out.seek(0)
+    return buf_out
+
+
 def obtener_modelo(ruta_archivo: str):
     nombre = os.path.basename(ruta_archivo).lower()
     for patron, modelo in MAPEO_MODELOS:
@@ -46,9 +74,25 @@ def procesar_archivo(ruta_archivo: str) -> pd.DataFrame:
     try:
         read_opts = {"dtype": str, "keep_default_na": False}
         if extension in (".xlsx", ".xlsm"):
-            df = pd.read_excel(ruta_archivo, engine="openpyxl", **read_opts)
+            try:
+                df = pd.read_excel(ruta_archivo, engine="openpyxl", **read_opts)
+            except Exception as openpyxl_err:
+                log.warning(f"openpyxl falló, parcheando font family inválido: {openpyxl_err}")
+                try:
+                    df = pd.read_excel(_parchear_xlsx(ruta_archivo), engine="openpyxl", **read_opts)
+                except Exception as e2:
+                    log.error(f"Error al procesar {ruta_archivo}: {e2}")
+                    return pd.DataFrame()
         elif extension == ".xls":
-            df = pd.read_excel(ruta_archivo, engine="xlrd", **read_opts)
+            all_sheets = pd.read_excel(ruta_archivo, engine="xlrd", sheet_name=None, **read_opts)
+            from collections import Counter
+            col_tuples = [tuple(s.columns) for s in all_sheets.values() if not s.empty]
+            if col_tuples:
+                cols_comunes = Counter(col_tuples).most_common(1)[0][0]
+                hojas_validas = [s for s in all_sheets.values() if tuple(s.columns) == cols_comunes and not s.empty]
+                df = pd.concat(hojas_validas, ignore_index=True)
+            else:
+                df = pd.DataFrame()
         elif extension == ".csv":
             try:
                 df = pd.read_csv(ruta_archivo, encoding="utf-8", **read_opts)

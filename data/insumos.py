@@ -3,10 +3,9 @@ from sqlmodel import SQLModel, Field
 
 class Medicamento(SQLModel, table=True):
     __tablename__ = "cat_medicamentos"
-    id: int = Field(primary_key=True)
-    grupo: str
-    clave: str
-    insumo: str
-    descripcion: str
-    indicaciones: str
+    clave: str = Field(primary_key=True)
+    grupo: Optional[str] = Field(default=None)
+    insumo: Optional[str] = Field(default=None)
+    descripcion: Optional[str] = Field(default=None)
+    indicaciones: Optional[str] = Field(default=None)
 

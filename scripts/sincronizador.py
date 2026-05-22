@@ -35,9 +35,12 @@ def sincronizar_en_disco(directorio_base: str) -> list[str]:
             os.rename(ruta_tmp, ruta_final)
 
             if ext == ".zip":
-                ruta_extraccion = os.path.join (directorio_base, f"{clave}_extraido")
+                ruta_extraccion = os.path.join(directorio_base, f"{clave}_extraido")
                 extraer_zip(ruta_final, ruta_extraccion)
-                catalogos_modificados.append(ruta_extraccion)
+                for nombre_archivo in os.listdir(ruta_extraccion):
+                    ruta_archivo = os.path.join(ruta_extraccion, nombre_archivo)
+                    if os.path.isfile(ruta_archivo):
+                        catalogos_modificados.append(ruta_archivo)
             else:
                 catalogos_modificados.append(ruta_final)
         else:

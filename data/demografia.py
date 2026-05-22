@@ -16,14 +16,14 @@ class LenguaIndigena(SQLModel, table=True):
 class Religion(SQLModel, table=True):
     __tablename__ = "religiones"
 
-    clave_credo: str = Field(primary_key=True)
-    credo: str
-    clave_grupo: str
-    grupo: str
-    clave_denominacion: str
-    denominacion: str
-    clave_religion: str
-    religion: str
+    clave_religion: str = Field(primary_key=True)
+    religion: Optional[str] = Field(default=None)
+    clave_credo: Optional[str] = Field(default=None, index=True)
+    credo: Optional[str] = Field(default=None)
+    clave_grupo: Optional[str] = Field(default=None, index=True)
+    grupo: Optional[str] = Field(default=None)
+    clave_denominacion: Optional[str] = Field(default=None)
+    denominacion: Optional[str] = Field(default=None)
 
 
 class Formacion(SQLModel, table=True):
