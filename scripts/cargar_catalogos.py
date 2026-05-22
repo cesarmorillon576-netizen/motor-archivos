@@ -16,11 +16,10 @@ from helpers import (
 )
 from helpers.sanitizer import transformar_para_modelo
 
-# Catálogos que requieren descarga manual (registro obligatorio)
+# Catálogos que requieren descarga manual
 _OMITIR_DESCARGA = {"loinc"}
 
-# Orden de inserción para respetar las FK:
-#   entidades → municipios → localidades → resto
+# Orden de inserción para respetar las FK
 _ORDEN_PRIORIDAD = [
     "entidad_federativa",
     "municipio",
@@ -38,7 +37,6 @@ def descargar_catalogos(destino: str = "descargas") -> None:
             log.info(f"Omitiendo '{clave}' (descarga manual requerida)")
             continue
 
-        # Extraer extensión real desde la URL (antes del query string)
         ext = os.path.splitext(url.split("?")[0])[1].lower() or ".xlsx"
         ruta = os.path.join(destino, f"{clave}_origen{ext}")
 
@@ -61,7 +59,6 @@ def cargar_archivo(ruta: str, batch_size: int = _BATCH_SIZE) -> int:
 
     df = normalizar_dataframe(df)
     df = transformar_para_modelo(df, modelo.__tablename__)
-    # Los transformers pueden introducir NaN en columnas nuevas; re-aplicar NaN→None
     df = df.where(pd.notna(df), None)
 
     if df.empty:
@@ -71,15 +68,12 @@ def cargar_archivo(ruta: str, batch_size: int = _BATCH_SIZE) -> int:
     total = len(df)
     log.info(f"Cargando {total} filas en tabla '{modelo.__tablename__}'...")
 
-    # autoflush=False previene flush prematuro en cada merge individual
     with Session(engine, autoflush=False) as session:
         try:
             insertados = 0
             for i in range(0, total, batch_size):
                 lote = df.iloc[i : i + batch_size]
                 for _, fila in lote.iterrows():
-                    # pd.notna filtra tanto None como NaN/NaT (pandas convierte
-                    # None→NaN en columnas numéricas al crearlas en el transformer)
                     datos = {k: v for k, v in fila.to_dict().items() if pd.notna(v)}
                     session.merge(modelo(**datos))
                     insertados += 1
@@ -95,7 +89,6 @@ def cargar_archivo(ruta: str, batch_size: int = _BATCH_SIZE) -> int:
 
 
 def orquestador(carpeta: str = "descargas") -> None:
-    # ⚠ iniciar_bd() es TEMPORAL — eliminar cuando NestJS gestione las migraciones
     iniciar_bd()
 
     descargar_catalogos(carpeta)

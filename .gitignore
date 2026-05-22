@@ -2,6 +2,7 @@
 # 1. Entorno Virtual y Dependencias de Python
 # ==========================================
 .venv/
+.claude
 venv/
 ENV/
 env/

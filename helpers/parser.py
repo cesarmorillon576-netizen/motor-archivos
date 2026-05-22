@@ -7,7 +7,7 @@ import data
 from .logger import log
 
 # Lista ordenada de tuplas (regex, modelo).
-# El orden importa: se usa el primer patrón que coincida.
+# se usa el primer patrón que coincida.
 MAPEO_MODELOS = [
     (r"diagnostico",              data.Diagnostico),
     (r"procedimiento",            data.Procedimiento),
@@ -21,7 +21,7 @@ MAPEO_MODELOS = [
     (r"localidad",                data.Localidad),
     (r"codigo[_ ]?postal|^cp_",   data.CodigoPostal),
     (r"medicamento",              data.Medicamento),
-    # CLUES y CIF pendientes de análisis — ver SIRES_refactor_sprint1.md §3.1/§3.2
+    # TODO: CLUES y CIF pendientes de análisis
 ]
 
 
@@ -44,9 +44,6 @@ def procesar_archivo(ruta_archivo: str) -> pd.DataFrame:
     log.info(f"Leyendo: {ruta_archivo}")
 
     try:
-        # dtype=str evita inferencias erróneas (claves numéricas como float, edades como int, etc.).
-        # keep_default_na=False evita que pandas interprete abreviaturas o claves como "NA", "N/A",
-        # "NULL", etc. como NaN — en catálogos médicos estos son valores legítimos.
         read_opts = {"dtype": str, "keep_default_na": False}
         if extension in (".xlsx", ".xlsm"):
             df = pd.read_excel(ruta_archivo, engine="openpyxl", **read_opts)

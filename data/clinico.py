@@ -71,8 +71,7 @@ class Procedimiento(SQLModel, table=True):
     nombre: str
     capitulo: str
 
-    # Jerarquía del catálogo — nullable porque las filas de encabezado de
-    # capítulo no tienen sección/categoría
+    # Jerarquía del catálogo — nullable porque las filas de encabezado de capítulo no tienen sección/categoría
     seccion: Optional[str] = Field(default=None, index=True)
     categoria: Optional[str] = Field(default=None)
     subcategoria: Optional[str] = Field(default=None)
@@ -108,7 +107,6 @@ class LoincStatus(str, Enum):
 
 
 class Loinc(SQLModel, table=True):
-    # Licencia: LOINC License (Regenstrief). Conservar campo external_copyright_notice.
     __tablename__ = "loinc"
     __table_args__ = (
         CheckConstraint(

@@ -8,7 +8,6 @@ from data.clinico import RestriccionSexo, UnidadEdad
 from .logger import log
 
 
-# ── Constantes internas ──────────────────────────────────────────────
 _EDAD_RE = re.compile(r"^(\d{1,3})([HDMA])$")
 
 # Valores que significan "sin dato" en los catálogos DGIS
@@ -83,7 +82,6 @@ def parse_edad_separada(valor, unidad) -> Tuple[Optional[int], Optional[str]]:
 
     u_raw = str(unidad).strip().upper() if (unidad is not None and not pd.isna(unidad)) else None
     if u_raw:
-        # Intentar mapeo de clave numérica primero, luego usar el valor directo si es letra válida
         u = _CVE_UNIDAD_EDAD.get(u_raw, u_raw)
         if u not in {"H", "D", "M", "A"}:
             u = None
@@ -103,7 +101,6 @@ def _normalizar_columna(col: str) -> str:
 
 
 def normalizar_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Limpieza genérica que aplica a todos los catálogos."""
     if df.empty:
         log.warning("Intento de normalizar un dataframe vacío")
         return df
@@ -114,7 +111,7 @@ def normalizar_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df.columns = [_normalizar_columna(c) for c in df.columns]
 
-    # 2. Alias de columnas conocidas para mantener compatibilidad
+    # 2. Alias de columnas para mantener compatibilidad
     if "mun_key" in df.columns and "municipio_key" not in df.columns:
         df = df.rename(columns={"mun_key": "municipio_key"})
 
@@ -146,7 +143,6 @@ def transformar_diagnostico(df: pd.DataFrame) -> pd.DataFrame:
 
     edades_min = df["linf"].apply(parse_edad_concatenada)
     edades_max = df["lsup"].apply(parse_edad_concatenada)
-    # Int64 nullable evita la conversión None→NaN que ocurre con float64
     df["edad_min_valor"] = pd.array([e[0] for e in edades_min], dtype=pd.Int64Dtype())
     df["edad_min_unidad"] = [e[1] for e in edades_min]
     df["edad_max_valor"] = pd.array([e[0] for e in edades_max], dtype=pd.Int64Dtype())
@@ -210,8 +206,6 @@ def transformar_procedimiento(df: pd.DataFrame) -> pd.DataFrame:
         "edad_max_valor", "edad_max_unidad",
     ]
     df = df[[c for c in columnas_modelo if c in df.columns]]
-    # El catálogo CIE-9-MC tiene catalog_key="00" una vez por capítulo (son encabezados de sección,
-    # no procedimientos reales). Se conserva solo el primero para respetar el PK único.
     df = df.drop_duplicates(subset=["catalog_key"], keep="first")
     return df
 

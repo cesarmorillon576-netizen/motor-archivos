@@ -7,10 +7,9 @@ import urllib3
 
 from .logger import log
 
-# Dominios con certificado SSL inválido pero fuente oficial y pública.
-# Expandir solo con justificación documentada; retirar cuando el cert sea corregido.
+# Dominios con SSL invalido (gracias gobierno de mechico)
 _DOMINIOS_SSL_RELAJADO = {
-    "csg.gob.mx",  # Compendio Nacional de Insumos para la Salud (hostname mismatch)
+    "csg.gob.mx",  
 }
 
 
