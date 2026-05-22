@@ -1,17 +1,21 @@
+from typing import Optional
 from sqlmodel import SQLModel, Field
 
-class LenguaIndigena(SQLModel, table = True):
+
+class LenguaIndigena(SQLModel, table=True):
     __tablename__ = "lenguas_indigenas"
-    
-    clave_familia: str = Field(primary_key=True)
-    clave_grupo: str
+
+    clave_lengua: str = Field(primary_key=True)
+    clave_familia: str = Field(index=True)
+    familia: Optional[str] = Field(default=None)
+    clave_grupo: str = Field(index=True)
     grupo: str
-    clave_lengua: str
     lengua_indigena: str
 
-class Religion(SQLModel, table = True):
+
+class Religion(SQLModel, table=True):
     __tablename__ = "religiones"
-    
+
     clave_credo: str = Field(primary_key=True)
     credo: str
     clave_grupo: str
@@ -21,18 +25,19 @@ class Religion(SQLModel, table = True):
     clave_religion: str
     religion: str
 
-class Formacion(SQLModel, table = True):
+
+class Formacion(SQLModel, table=True):
     __tablename__ = "formaciones"
-    
+
     catalog_key: str = Field(primary_key=True)
+    formacion_academica: Optional[str] = Field(default=None)
     agrupacion: str
     grado: str
 
-class Nacionalidad(SQLModel, table = True):
+
+class Nacionalidad(SQLModel, table=True):
     __tablename__ = "nacionalidades"
-    
+
     codigo_pais: str = Field(primary_key=True)
     pais: str
     clave_nacionalidad: str
-
-    

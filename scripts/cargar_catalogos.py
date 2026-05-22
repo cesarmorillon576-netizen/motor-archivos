@@ -1,76 +1,128 @@
 import os
-from sqlmodel import Session
-from data import engine, obtener_sesion, URLS_CATALOGOS, iniciar_bd
-from helpers import (
-    log, descargar_archivo, extraer_zip, escanear_directorio,
-    obtener_modelo, procesar_archivo, normalizar_dataframe
-)
 
-def descargar_catalogos():
-    log.info(f"Iniciando descarga dde catálogos oficiales...")
+import pandas as pd
+from sqlmodel import Session
+
+from data.db import engine, iniciar_bd
+from data.constants import URLS_CATALOGOS
+from helpers import (
+    log,
+    descargar_archivo,
+    extraer_zip,
+    escanear_directorio,
+    obtener_modelo,
+    procesar_archivo,
+    normalizar_dataframe,
+)
+from helpers.sanitizer import transformar_para_modelo
+
+# Catálogos que requieren descarga manual (registro obligatorio)
+_OMITIR_DESCARGA = {"loinc"}
+
+# Orden de inserción para respetar las FK:
+#   entidades → municipios → localidades → resto
+_ORDEN_PRIORIDAD = [
+    "entidad_federativa",
+    "municipio",
+    "localidad",
+]
+
+_BATCH_SIZE = 5_000
+
+
+def descargar_catalogos(destino: str = "descargas") -> None:
+    log.info("Iniciando descarga de catálogos oficiales...")
 
     for clave, url in URLS_CATALOGOS.items():
-        if "loinc" in clave:
-            log.info("Saltando descarga automática de LOINC")
+        if clave in _OMITIR_DESCARGA:
+            log.info(f"Omitiendo '{clave}' (descarga manual requerida)")
             continue
 
-        extension = ".zip" if ".zip" in url.lower() else ".xlsx"
-        ruta_descarga = f"descargas/{clave}_origen{extension}"       
+        # Extraer extensión real desde la URL (antes del query string)
+        ext = os.path.splitext(url.split("?")[0])[1].lower() or ".xlsx"
+        ruta = os.path.join(destino, f"{clave}_origen{ext}")
 
-        exito = descargar_archivo(url, ruta_descarga )
+        exito = descargar_archivo(url, ruta)
 
-        if exito and extension == ".zip":
-            carpeta_destino = f"descargas/{clave}_extraido"
-            extraer_zip(ruta_descarga, carpeta_destino)   
+        if exito and ext == ".zip":
+            extraer_zip(ruta, os.path.join(destino, f"{clave}_extraido"))
 
 
-def orquestador(carpeta_origen: str = "descargas"):
+def cargar_archivo(ruta: str, batch_size: int = _BATCH_SIZE) -> int:
+    modelo = obtener_modelo(ruta)
+    if not modelo:
+        log.warning(f"Saltando '{os.path.basename(ruta)}': sin modelo mapeado")
+        return 0
+
+    df = procesar_archivo(ruta)
+    if df is None or df.empty:
+        log.warning(f"Saltando '{os.path.basename(ruta)}': DataFrame vacío o no legible")
+        return 0
+
+    df = normalizar_dataframe(df)
+    df = transformar_para_modelo(df, modelo.__tablename__)
+    # Los transformers pueden introducir NaN en columnas nuevas; re-aplicar NaN→None
+    df = df.where(pd.notna(df), None)
+
+    if df.empty:
+        log.warning(f"DataFrame vacío tras transformación para '{modelo.__tablename__}'")
+        return 0
+
+    total = len(df)
+    log.info(f"Cargando {total} filas en tabla '{modelo.__tablename__}'...")
+
+    # autoflush=False previene flush prematuro en cada merge individual
+    with Session(engine, autoflush=False) as session:
+        try:
+            insertados = 0
+            for i in range(0, total, batch_size):
+                lote = df.iloc[i : i + batch_size]
+                for _, fila in lote.iterrows():
+                    # pd.notna filtra tanto None como NaN/NaT (pandas convierte
+                    # None→NaN en columnas numéricas al crearlas en el transformer)
+                    datos = {k: v for k, v in fila.to_dict().items() if pd.notna(v)}
+                    session.merge(modelo(**datos))
+                    insertados += 1
+                session.commit()
+                log.info(f"  batch {i // batch_size + 1}: +{len(lote)} filas")
+
+            log.info(f"✓ {insertados} filas sincronizadas en '{modelo.__tablename__}'")
+            return insertados
+        except Exception as e:
+            session.rollback()
+            log.error(f"Error al sincronizar '{modelo.__tablename__}': {e}")
+            return 0
+
+
+def orquestador(carpeta: str = "descargas") -> None:
+    # ⚠ iniciar_bd() es TEMPORAL — eliminar cuando NestJS gestione las migraciones
     iniciar_bd()
-    descargar_catalogos()
-    log.info(f"Iniciando proceso en: {carpeta_origen}")
 
-    arbol_archivos = escanear_directorio(carpeta_origen)
-    archivos_a_procesar = arbol_archivos["excel"] + arbol_archivos["csv"]
+    descargar_catalogos(carpeta)
 
-    if not archivos_a_procesar:
+    arbol = escanear_directorio(carpeta)
+    archivos = arbol["excel"] + arbol["csv"]
+
+    if not archivos:
         log.warning("No se encontraron archivos para procesar en disco.")
         return
 
-    prioridad = {
-        'entidad_federativa_origen.xlsx': 1,
-        'municipio_origen.xlsx': 2,
-        'localidades_origen.xlsx': 3
-    }
-    archivos_a_procesar = sorted(archivos_a_procesar, key=lambda x: prioridad.get(os.path.basename(x), 99))
+    def prioridad(ruta: str) -> int:
+        nombre = os.path.basename(ruta).lower()
+        for i, clave in enumerate(_ORDEN_PRIORIDAD):
+            if clave in nombre:
+                return i
+        return len(_ORDEN_PRIORIDAD)
 
-    for ruta_archivo in archivos_a_procesar:
-        nombre_corto = os.path.basename(ruta_archivo)
-        log.info(f"Procesando: {nombre_corto}")
+    archivos.sort(key=prioridad)
 
-        ModeloSql = obtener_modelo(ruta_archivo)
-        if not ModeloSql:
-            log.warning(f"Saltando archivo: {nombre_corto} (no mapeado)")
-            continue
+    for archivo in archivos:
+        log.info(f"Procesando: {os.path.basename(archivo)}")
+        cargar_archivo(archivo)
+        log.info("=" * 50)
 
-        df_sucio = procesar_archivo(ruta_archivo)
-        if df_sucio is None or df_sucio.empty:
-            continue
-        df_limpio = normalizar_dataframe(df_sucio)
+    log.info("Catálogos actualizados.")
 
-        registros_exitosos = 0
-        try:
-            with Session(engine) as session:
-                for _, fila in df_limpio.iterrows():
-                    nuevo_registro = ModeloSql(**fila.to_dict())
-                    session.merge(nuevo_registro)
-                    registros_exitosos += 1
-                session.commit()
-            log.info(f"Sincronizados {registros_exitosos} filas en tabla '{ModeloSql.__tablename__}'")
-        except Exception as e:
-            log.error(f"Error al sincronizar tabla '{nombre_corto}': {str(e)}")   
-
-        log.info("==================================================")
-        log.info(f"Catalogos actualizados.")
 
 if __name__ == "__main__":
-     orquestador()
+    orquestador()
