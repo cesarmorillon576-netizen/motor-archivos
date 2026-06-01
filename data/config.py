@@ -6,7 +6,10 @@ class Settings(BaseSettings):
     DB_HOST: str
     DB_PORT: str
     DB_NAME: str
-    
+
+    LOINC_USER: str | None = None
+    LOINC_PASSWORD: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

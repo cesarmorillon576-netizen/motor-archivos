@@ -115,6 +115,18 @@ def normalizar_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     if "mun_key" in df.columns and "municipio_key" not in df.columns:
         df = df.rename(columns={"mun_key": "municipio_key"})
 
+    # Headers de LOINC que no separan palabras al normalizar → nombre del modelo
+    _ALIAS_COLUMNAS = {
+        "class": "loinc_class",
+        "classtype": "class_type",
+        "shortname": "short_name",
+        "versionfirstreleased": "version_first_released",
+        "versionlastchanged": "version_last_changed",
+    }
+    for origen, destino in _ALIAS_COLUMNAS.items():
+        if origen in df.columns and destino not in df.columns:
+            df = df.rename(columns={origen: destino})
+
     # 3. Normalización de columnas llave (string, sin '.0' residual de lectura como float)
     LLAVES = {
         "catalog_key", "codigo_pais", "clave_familia",

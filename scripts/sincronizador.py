@@ -1,10 +1,36 @@
 import os
 from data.constants import URLS_CATALOGOS
+from data.config import settings
 from helpers.logger import log
-from helpers.extractor import descargar_archivo, extraer_zip
+from helpers.extractor import (
+    descargar_archivo,
+    extraer_zip,
+    extraer_archivo_de_zip,
+    resolver_descarga_loinc,
+)
 from helpers.hasher import comparar_bytes
 
-_OMITIR_DESCARGA = {"loinc"}
+_OMITIR_DESCARGA = set()
+
+# Catálogos que requieren autenticación (Basic Auth por GET)
+_CATALOGOS_CON_AUTH = {
+    "loinc": (settings.LOINC_USER, settings.LOINC_PASSWORD),
+}
+
+# Extensión forzada para catálogos cuya URL no la revela (ej. endpoints /api/)
+_EXTENSION_FORZADA = {
+    "loinc": ".zip",
+}
+
+# Catálogos cuya URL apunta a metadata; hay que resolver la URL real del archivo
+_RESOLVEDORES_URL = {
+    "loinc": resolver_descarga_loinc,
+}
+
+# ZIPs con muchos archivos donde solo interesa una ruta interna concreta
+_ARCHIVO_EN_ZIP = {
+    "loinc": "LoincTable/Loinc.csv",
+}
 
 def sincronizar_en_disco(directorio_base: str) -> list[str]:
     """
@@ -19,11 +45,20 @@ def sincronizar_en_disco(directorio_base: str) -> list[str]:
             log.info(f"Omitiendo descarga de {clave}")
             continue
 
-        ext = os.path.splitext(url.split("?")[0])[1].lower() or ".xlsx"
+        ext = _EXTENSION_FORZADA.get(clave) or os.path.splitext(url.split("?")[0])[1].lower() or ".xlsx"
         ruta_tmp = os.path.join(carpeta_temporal, f"{clave}_origen{ext}")
         ruta_final = os.path.join(directorio_base, f"{clave}_origen{ext}")
 
-        if not descargar_archivo(url, ruta_tmp):
+        auth = _CATALOGOS_CON_AUTH.get(clave)
+
+        resolver = _RESOLVEDORES_URL.get(clave)
+        if resolver:
+            url = resolver(url, auth)
+            if not url:
+                log.error(f"Sincronizacion fallida para: {clave}")
+                continue
+
+        if not descargar_archivo(url, ruta_tmp, auth=auth):
             log.error(f"Sincronizacion fallida para: {clave}")
             continue
 
@@ -36,11 +71,17 @@ def sincronizar_en_disco(directorio_base: str) -> list[str]:
 
             if ext == ".zip":
                 ruta_extraccion = os.path.join(directorio_base, f"{clave}_extraido")
-                extraer_zip(ruta_final, ruta_extraccion)
-                for nombre_archivo in os.listdir(ruta_extraccion):
-                    ruta_archivo = os.path.join(ruta_extraccion, nombre_archivo)
-                    if os.path.isfile(ruta_archivo):
+                interno = _ARCHIVO_EN_ZIP.get(clave)
+                if interno:
+                    ruta_archivo = extraer_archivo_de_zip(ruta_final, interno, ruta_extraccion)
+                    if ruta_archivo:
                         catalogos_modificados.append(ruta_archivo)
+                else:
+                    extraer_zip(ruta_final, ruta_extraccion)
+                    for nombre_archivo in os.listdir(ruta_extraccion):
+                        ruta_archivo = os.path.join(ruta_extraccion, nombre_archivo)
+                        if os.path.isfile(ruta_archivo):
+                            catalogos_modificados.append(ruta_archivo)
             else:
                 catalogos_modificados.append(ruta_final)
         else:

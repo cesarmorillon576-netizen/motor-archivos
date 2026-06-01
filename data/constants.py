@@ -12,4 +12,5 @@ URLS_CATALOGOS = {
     "nacionalidades":      "http://www.dgis.salud.gob.mx/descargas/catalogos/CAT_NACIONALIDADES.zip",
     "religion":            "http://gobi.salud.gob.mx/gobi/catalogos/catalogosmaestros/CAT_RELIGION_20200701.xlsx?V=2020.07.01",
     "medicamentos":        "https://csg.gob.mx/COMPENDIO_MEDICAMENTOS_V07042026.xlsm",
+    "loinc": "https://loinc.regenstrief.org/api/v1/Loinc"
 }
