@@ -16,7 +16,7 @@ from .clinico import (
 from .demografia import LenguaIndigena, Religion, Formacion, Nacionalidad
 
 # Modelos geográficos
-from .geografia import EntidadFederativa, Municipio, Localidad, CodigoPostal
+from .geografia import EntidadFederativa, Municipio, Localidad, CodigoPostal, CLUES
 
 # Modelos de insumos
 from .insumos import Medicamento

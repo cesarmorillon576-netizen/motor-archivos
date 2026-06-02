@@ -86,7 +86,6 @@ class Procedimiento(SQLModel, table=True):
     edad_max_unidad: Optional[str] = Field(default=None)
 
 
-# TODO: esto hay que verlo porque esta rarillo
 # ── LOINC (Regenstrief) ─────────────────────────────────────────────
 class LoincScale(str, Enum):
     QUANTITATIVE = "Qn"

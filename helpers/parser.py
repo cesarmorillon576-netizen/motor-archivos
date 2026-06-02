@@ -23,7 +23,8 @@ MAPEO_MODELOS = [
     (r"localidad",                data.Localidad),
     (r"codigo[_ ]?postal|^cp_",   data.CodigoPostal),
     (r"medicamento",              data.Medicamento),
-    # TODO: CLUES y CIF pendientes de análisis
+    (r"clues",                    data.CLUES),
+    # TODO: CIF pendiente de análisis
 ]
 
 
@@ -53,13 +54,15 @@ def _parchear_xlsx(ruta_archivo: str) -> io.BytesIO:
     return buf_out
 
 
-def obtener_modelo(ruta_archivo: str):
+def obtener_modelo(ruta_archivo: str, log_match: bool = True):
     nombre = os.path.basename(ruta_archivo).lower()
     for patron, modelo in MAPEO_MODELOS:
         if re.search(patron, nombre):
-            log.info(f"Archivo '{nombre}' → tabla '{modelo.__tablename__}'")
+            if log_match:
+                log.info(f"Archivo '{nombre}' → tabla '{modelo.__tablename__}'")
             return modelo
-    log.warning(f"Archivo '{nombre}' no corresponde a ningún modelo registrado")
+    if log_match:
+        log.warning(f"Archivo '{nombre}' no corresponde a ningún modelo registrado")
     return None
 
 

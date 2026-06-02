@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 
 import pandas as pd
 
-from data.clinico import RestriccionSexo, UnidadEdad
+from data.clinico import RestriccionSexo
 from .logger import log
 
 
@@ -222,10 +222,70 @@ def transformar_procedimiento(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def transformar_localidad(df: pd.DataFrame) -> pd.DataFrame:
+    """Reconstruye el cvegeo INEGI (9 díg: entidad+municipio+localidad) desde las
+    claves componentes. La columna CVEGEO del origen pierde el cero inicial en las
+    entidades 01–09 (Excel la guarda como número), generando PKs de 8 dígitos que
+    no casan con las claves geográficas. Las componentes sí vienen completas."""
+    df = df.copy()
+    ent = df["efe_key"].fillna("").astype(str).str.strip().str.zfill(2)
+    mun = df["municipio_key"].fillna("").astype(str).str.strip().str.zfill(3)
+    loc = df["catalog_key"].fillna("").astype(str).str.strip().str.zfill(4)
+    df["cvegeo"] = ent + mun + loc
+    return df
+
+
+def transformar_clues(df: pd.DataFrame) -> pd.DataFrame:
+    """Catálogo CLUES (DGIS): arma los cvegeo geográficos concatenando
+    entidad+municipio+localidad y selecciona solo los campos del modelo.
+
+    El archivo trae las claves por separado (CLAVE DE LA ENTIDAD / DEL MUNICIPIO /
+    DE LA LOCALIDAD); aquí se concatenan con relleno de ceros para que coincidan
+    con el cvegeo de cat_municipios / cat_localidades."""
+    df = df.copy()
+
+    def _clave(serie: pd.Series, ancho: int) -> pd.Series:
+        """Limpia, descarta nulos textuales y rellena con ceros a la izquierda."""
+        s = serie.fillna("").astype(str).str.strip()
+        s = s.mask(s.str.upper().isin(_NULOS), "")
+        return s.str.zfill(ancho).where(s != "", None)
+
+    ent = _clave(df["clave_de_la_entidad"], 2)
+    mun = _clave(df["clave_del_municipio"], 3)
+    loc = _clave(df["clave_de_la_localidad"], 4)
+
+    df["efe_key"] = ent
+    df["municipio_cvegeo"] = (ent.fillna("") + mun.fillna("")).where(
+        ent.notna() & mun.notna(), None
+    )
+    df["localidad_cvegeo"] = (ent.fillna("") + mun.fillna("") + loc.fillna("")).where(
+        ent.notna() & mun.notna() & loc.notna(), None
+    )
+
+    df = df.rename(columns={
+        "clave_de_la_institucion": "clave_institucion",
+        "clave_de_tipologia":      "clave_tipologia",
+        "nombre_de_tipologia":     "nombre_tipologia",
+        "estatus_de_operacion":    "estatus_operacion",
+        # 'clues', 'nivel_atencion' y 'codigo_postal' ya coinciden tras normalizar
+    })
+
+    columnas_modelo = [
+        "clues", "clave_institucion", "clave_tipologia", "nombre_tipologia",
+        "nivel_atencion", "estatus_operacion",
+        "efe_key", "municipio_cvegeo", "localidad_cvegeo", "codigo_postal",
+    ]
+    df = df[[c for c in columnas_modelo if c in df.columns]]
+    df = df.drop_duplicates(subset=["clues"], keep="first")
+    return df
+
+
 # ── Despachador ─────────────────────────────────────────────────────
 _TRANSFORMERS = {
-    "diagnostico":  transformar_diagnostico,
+    "diagnostico": transformar_diagnostico,
     "procedimiento": transformar_procedimiento,
+    "cat_localidades": transformar_localidad,
+    "cat_establecimientos_clues": transformar_clues,
 }
 
 

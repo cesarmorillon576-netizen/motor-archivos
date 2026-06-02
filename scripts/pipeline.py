@@ -128,8 +128,10 @@ def _hash_filas(df: pd.DataFrame, cols: list) -> pd.Series:
     """
     tmp = pd.DataFrame(index=df.index)
     for col in cols:
-        s = df[col].fillna("").astype(str)
-        s = s.replace({"None": "", "nan": "", "<NA>": ""})
+        # astype(str) antes que fillna: fillna("") revienta en columnas Int64
+        # (edad_*_valor), donde '' no es un valor válido para el dtype.
+        s = df[col].astype(str)
+        s = s.replace({"None": "", "nan": "", "NaN": "", "<NA>": ""})
         s = s.str.replace(r"\.0$", "", regex=True)
         tmp[col] = s
     return pd.util.hash_pandas_object(tmp, index=False)

@@ -32,7 +32,6 @@ class Localidad(SQLModel, table=True):
 class CodigoPostal(SQLModel, table=True):
     __tablename__ = "codigos_postales"
 
-    # PK compuesta: estado + municipio + ID secuencial del asentamiento
     c_estado: str = Field(primary_key=True)
     c_mnpio: str = Field(primary_key=True)
     id_asenta_cpcons: str = Field(primary_key=True)
@@ -51,4 +50,20 @@ class CodigoPostal(SQLModel, table=True):
     c_cve_ciudad: Optional[str] = Field(default=None)
 
 
-# TODO: Modelo CLUES pendiente de análisis.
+class CLUES(SQLModel, table=True):
+    __tablename__ = "cat_establecimientos_clues"
+
+    clues: str = Field(primary_key=True, max_length=13)
+    clave_institucion: str = Field(index=True)
+    clave_tipologia: Optional[str] = Field(default=None, index=True)
+    nombre_tipologia: Optional[str] = Field(default=None)
+    nivel_atencion: Optional[str] = Field(default=None)
+    estatus_operacion: str = Field(index=True)
+
+    # Claves geográficas en formato cvegeo (entidad+municipio[+localidad]),
+    # reconstruidas en transformar_clues para casar con cat_municipios/cat_localidades.
+    efe_key: str = Field(index=True)
+    municipio_cvegeo: Optional[str] = Field(default=None, index=True)
+    localidad_cvegeo: Optional[str] = Field(default=None, index=True)
+
+    codigo_postal: Optional[str] = Field(default=None, index=True)
