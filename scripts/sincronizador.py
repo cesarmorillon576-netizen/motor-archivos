@@ -79,7 +79,7 @@ def _tabla_pendiente(ruta_datos: str) -> bool:
         with engine.connect() as conn:
             if conn.execute(text("SELECT to_regclass(:t)"), {"t": tabla}).scalar() is None:
                 return True
-            return conn.execute(text(f"SELECT count(*) FROM {tabla}")).scalar() == 0
+            return conn.execute(text(f'SELECT count(*) FROM "{tabla}"')).scalar() == 0
     except Exception as e:
         log.warning(f"No se pudo verificar la tabla '{tabla}' en la BD: {e}")
         return False

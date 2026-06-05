@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import Session
 from data.db import engine
@@ -33,6 +33,10 @@ def insertar_bd(ruta: str, batch_size: int = _BATCH_SIZE) -> int:
     tabla = modelo.__table__
     pk_cols = {c.name for c in tabla.primary_key.columns}
     model_cols = {c.name for c in tabla.columns}
+
+    pk_presentes = [c for c in pk_cols if c in df.columns]
+    if pk_presentes:
+        df = df.drop_duplicates(subset=pk_presentes, keep="last").reset_index(drop=True)
 
     total = len(df)
     log.info(f"Comparando {total} filas contra '{modelo.__tablename__}'...")
@@ -98,7 +102,7 @@ def _filtrar_cambiados(
     try:
         with engine.connect() as conn:
             df_actual = pd.read_sql(
-                text(f'SELECT {", ".join(df_cols)} FROM {tabla.name}'),
+                select(*[tabla.c[c] for c in df_cols]),
                 conn,
             )
     except Exception:

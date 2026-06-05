@@ -129,3 +129,12 @@ class Loinc(SQLModel, table=True):
     version_first_released: Optional[str] = Field(default=None)
     version_last_changed: Optional[str] = Field(default=None)
     external_copyright_notice: Optional[str] = Field(default=None)
+
+
+# TODO: CIF pendiente de análisis del catálogo origen.
+# class CIF(SQLModel, table=True):
+#     __tablename__ = "cif"
+#
+#     cif_num: str = Field(primary_key=True)
+#     nombre: str
+#     descripcion: Optional[str] = Field(default=None)

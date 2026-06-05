@@ -1,3 +1,4 @@
+import copy
 import logging
 import os
 import sys
@@ -12,6 +13,7 @@ class ColoresConsoleFormatter(logging.Formatter):
     def format(self, record):
         formato_base = '[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d]: %(message)s'
 
+        record = copy.copy(record)
         if record.levelno == logging.INFO:
             record.levelname = f"{VERDE}{record.levelname}{RESET}"
         elif record.levelno == logging.WARNING:
