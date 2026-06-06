@@ -1,6 +1,6 @@
 import re
 import unicodedata
-from typing import Optional, Tuple
+from typing import Optional, Tuple, cast
 
 import pandas as pd
 
@@ -175,7 +175,7 @@ def transformar_diagnostico(df: pd.DataFrame) -> pd.DataFrame:
         "edad_min_valor", "edad_min_unidad",
         "edad_max_valor", "edad_max_unidad",
     ]
-    return df[columnas_modelo]
+    return cast(pd.DataFrame, df[columnas_modelo])
 
 
 def transformar_procedimiento(df: pd.DataFrame) -> pd.DataFrame:
@@ -217,7 +217,7 @@ def transformar_procedimiento(df: pd.DataFrame) -> pd.DataFrame:
         "edad_min_valor", "edad_min_unidad",
         "edad_max_valor", "edad_max_unidad",
     ]
-    df = df[[c for c in columnas_modelo if c in df.columns]]
+    df = cast(pd.DataFrame, df[[c for c in columnas_modelo if c in df.columns]])
     df = df.drop_duplicates(subset=["catalog_key"], keep="first")
     return df
 
@@ -250,9 +250,9 @@ def transformar_clues(df: pd.DataFrame) -> pd.DataFrame:
         s = s.mask(s.str.upper().isin(_NULOS), "")
         return s.str.zfill(ancho).where(s != "", None)
 
-    ent = _clave(df["clave_de_la_entidad"], 2)
-    mun = _clave(df["clave_del_municipio"], 3)
-    loc = _clave(df["clave_de_la_localidad"], 4)
+    ent = _clave(cast(pd.Series, df["clave_de_la_entidad"]), 2)
+    mun = _clave(cast(pd.Series, df["clave_del_municipio"]), 3)
+    loc = _clave(cast(pd.Series, df["clave_de_la_localidad"]), 4)
 
     df["efe_key"] = ent
     df["municipio_cvegeo"] = (ent.fillna("") + mun.fillna("")).where(
@@ -275,7 +275,7 @@ def transformar_clues(df: pd.DataFrame) -> pd.DataFrame:
         "nivel_atencion", "estatus_operacion",
         "efe_key", "municipio_cvegeo", "localidad_cvegeo", "codigo_postal",
     ]
-    df = df[[c for c in columnas_modelo if c in df.columns]]
+    df = cast(pd.DataFrame, df[[c for c in columnas_modelo if c in df.columns]])
     df = df.drop_duplicates(subset=["clues"], keep="first")
     return df
 
