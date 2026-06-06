@@ -1,9 +1,9 @@
 from typing import Optional
 from sqlmodel import SQLModel, Field
-
+from typing import Any
 
 class EntidadFederativa(SQLModel, table=True):
-    __tablename__ = "cat_entidades_federativas"
+    __tablename__: Any = "cat_entidades_federativas"
 
     catalog_key: str = Field(primary_key=True)
     entidad_federativa: str
@@ -11,7 +11,7 @@ class EntidadFederativa(SQLModel, table=True):
 
 
 class Municipio(SQLModel, table=True):
-    __tablename__ = "cat_municipios"
+    __tablename__: Any = "cat_municipios"
 
     cvegeo: str = Field(primary_key=True)
     catalog_key: str = Field(index=True)
@@ -20,7 +20,7 @@ class Municipio(SQLModel, table=True):
 
 
 class Localidad(SQLModel, table=True):
-    __tablename__ = "cat_localidades"
+    __tablename__: Any = "cat_localidades"
 
     cvegeo: str = Field(primary_key=True)
     catalog_key: str = Field(index=True)
@@ -30,7 +30,7 @@ class Localidad(SQLModel, table=True):
 
 
 class CodigoPostal(SQLModel, table=True):
-    __tablename__ = "codigos_postales"
+    __tablename__: Any = "codigos_postales"
 
     c_estado: str = Field(primary_key=True)
     c_mnpio: str = Field(primary_key=True)
@@ -51,7 +51,7 @@ class CodigoPostal(SQLModel, table=True):
 
 
 class CLUES(SQLModel, table=True):
-    __tablename__ = "cat_establecimientos_clues"
+    __tablename__: Any = "cat_establecimientos_clues"
 
     clues: str = Field(primary_key=True, max_length=13)
     clave_institucion: str = Field(index=True)

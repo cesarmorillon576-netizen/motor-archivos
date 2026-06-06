@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Optional
 from sqlalchemy import CheckConstraint
 from sqlmodel import SQLModel, Field
-
+from typing import Any
 
 # ── Tipos compartidos ────────────────────────────────────────────────
 class RestriccionSexo(str, Enum):
@@ -20,7 +20,7 @@ class UnidadEdad(str, Enum):
 
 # ── Diagnóstico (CIE-10 DGIS) ───────────────────────────────────────
 class Diagnostico(SQLModel, table=True):
-    __tablename__ = "diagnostico"
+    __tablename__: Any = "diagnostico"
     __table_args__ = (
         CheckConstraint(
             "restriccion_sexo IN ('AMBOS', 'HOMBRE', 'MUJER')",
@@ -58,7 +58,7 @@ class Diagnostico(SQLModel, table=True):
 
 # ── Procedimiento (CIE-9-MC DGIS) ───────────────────────────────────
 class Procedimiento(SQLModel, table=True):
-    __tablename__ = "procedimiento"
+    __tablename__: Any = "procedimiento"
     __table_args__ = (
         CheckConstraint(
             "restriccion_sexo IN ('AMBOS', 'HOMBRE', 'MUJER')",
@@ -106,7 +106,7 @@ class LoincStatus(str, Enum):
 
 
 class Loinc(SQLModel, table=True):
-    __tablename__ = "loinc"
+    __tablename__: Any = "loinc"
     __table_args__ = (
         CheckConstraint(
             "status IN ('ACTIVE','TRIAL','DISCOURAGED','DEPRECATED')",

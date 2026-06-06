@@ -16,4 +16,4 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]  # pydantic-settings los carga del .env

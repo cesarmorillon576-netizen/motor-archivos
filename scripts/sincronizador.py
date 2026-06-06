@@ -16,21 +16,18 @@ from helpers.hasher import comparar_bytes
 _OMITIR_DESCARGA = set()
 
 # Catálogos que requieren autenticación (Basic Auth por GET)
-_CATALOGOS_CON_AUTH = {
-    "loinc": (settings.LOINC_USER, settings.LOINC_PASSWORD),
-}
+_CATALOGOS_CON_AUTH: dict[str, tuple[str, str]] = {}
+if settings.LOINC_USER and settings.LOINC_PASSWORD:
+    _CATALOGOS_CON_AUTH["loinc"] = (settings.LOINC_USER, settings.LOINC_PASSWORD)
 
-# Extensión forzada para catálogos cuya URL no la revela (ej. endpoints /api/)
 _EXTENSION_FORZADA = {
     "loinc": ".zip",
 }
 
-# Catálogos cuya URL apunta a metadata; hay que resolver la URL real del archivo
 _RESOLVEDORES_URL = {
     "loinc": resolver_descarga_loinc,
 }
 
-# ZIPs con muchos archivos donde solo interesa una ruta interna concreta
 _ARCHIVO_EN_ZIP = {
     "loinc": "LoincTable/Loinc.csv",
 }
@@ -39,7 +36,6 @@ def _materializar_datos(
     clave: str, ruta_final: str, ext: str, directorio_base: str, forzar: bool = False
 ) -> list[str]:
     """Devuelve las rutas de los archivos de datos listos para insertar.
-
     Para catálogos planos es el propio archivo. Para ZIPs extrae el contenido
     (o reutiliza la extracción previa, salvo `forzar=True` tras un cambio real)."""
     if ext != ".zip":
