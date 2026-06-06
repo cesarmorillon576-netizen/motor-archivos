@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     DB_PORT: str
     DB_NAME: str
 
+    LOG_LEVEL: str = "INFO"
+    
     LOINC_USER: str | None = None
     LOINC_PASSWORD: str | None = None
 

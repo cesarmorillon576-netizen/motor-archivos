@@ -12,7 +12,6 @@ lib64/
 include/
 pyvenv.cfg
 .env
-.env.*
 *.local
 credentials.json
 **/__pycache__/

@@ -1,4 +1,5 @@
 import os
+import uuid
 from sqlalchemy import text
 from data.constants import URLS_CATALOGOS
 from data.config import settings
@@ -92,6 +93,10 @@ def sincronizar_en_disco(directorio_base: str) -> list[str]:
     carpeta_temporal = os.path.join(directorio_base, "temporales")
     catalogos_modificados = []
 
+    run_id = uuid.uuid4().hex[:8]
+    fallidos = []
+    log.info(f"=== INICIO sincronización run = {run_id} ===")
+
     for clave, url in URLS_CATALOGOS.items():
         if clave in _OMITIR_DESCARGA:
             log.info(f"Omitiendo descarga de {clave}")
@@ -107,15 +112,17 @@ def sincronizar_en_disco(directorio_base: str) -> list[str]:
         if resolver:
             url = resolver(url, auth)
             if not url:
-                log.error(f"Sincronizacion fallida para: {clave}")
+                log.error(f"[{clave}:descarga] Sincronizacion fallida.")
+                fallidos.append(clave)
                 continue
 
         if not descargar_archivo(url, ruta_tmp, auth=auth):
-            log.error(f"Sincronizacion fallida para: {clave}")
+            log.error(f"[{clave}:descarga] Sincronizacion fallida.")
+            fallidos.append(clave)
             continue
 
         if comparar_bytes(ruta_tmp, ruta_final):
-            log.info(f"Cambio detectado en catálogo: '{clave}'")
+            log.info(f"[{clave}:comparacion] Cambio detectado en catálogo: '{clave}'")
 
             if os.path.exists(ruta_final):
                 os.remove(ruta_final)
@@ -137,4 +144,8 @@ def sincronizar_en_disco(directorio_base: str) -> list[str]:
                 catalogos_modificados.extend(pendientes)
             else:
                 log.info(f"Catálogo '{clave}' sin cambios...")
+
+    log.info(f"=== FIN sincronización run = {run_id} ===")
+    if fallidos:
+        log.info(f"Fallidos: {fallidos}")
     return catalogos_modificados

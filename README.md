@@ -79,7 +79,14 @@ DB_PASSWORD=postgres
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=nest_project
+
+# Opcionales
+LOG_LEVEL=INFO         # DEBUG, INFO, WARNING, ERROR, CRITICAL (por defecto INFO)
+LOINC_USER=            # solo para descargar el catálogo LOINC (Basic Auth)
+LOINC_PASSWORD=
 ```
+
+> Tienes la plantilla completa en `.env.example`: cópiala con `cp .env.example .env` y rellena los valores.
 
 #### 5. Ejecutar
 
@@ -148,7 +155,14 @@ DB_PASSWORD=postgres
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=nest_project
+
+# Opcionales
+LOG_LEVEL=INFO         # DEBUG, INFO, WARNING, ERROR, CRITICAL (por defecto INFO)
+LOINC_USER=            # solo para descargar el catálogo LOINC (Basic Auth)
+LOINC_PASSWORD=
 ```
+
+> Tienes la plantilla completa en `.env.example`: cópiala con `cp .env.example .env` y rellena los valores.
 
 #### 5. Ejecutar
 
@@ -213,7 +227,14 @@ DB_PASSWORD=postgres
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=nest_project
+
+# Opcionales
+LOG_LEVEL=INFO         # DEBUG, INFO, WARNING, ERROR, CRITICAL (por defecto INFO)
+LOINC_USER=            # solo para descargar el catálogo LOINC (Basic Auth)
+LOINC_PASSWORD=
 ```
+
+> Tienes la plantilla completa en `.env.example`: cópiala con `cp .env.example .env` y rellena los valores.
 
 #### 5. Ejecutar
 
@@ -259,11 +280,48 @@ Los logs se escriben en consola y en `logs/ejecucion.log`.
 
 ---
 
+## Logs y auditoría
+
+### Configuración del log
+
+- **Salida doble:** consola (coloreada) + archivo `logs/ejecucion.log`.
+- **Nivel configurable** vía `LOG_LEVEL` en el `.env` (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). Por defecto `INFO`.
+- **Rotación automática:** el archivo rota al llegar a 5 MB y conserva hasta 5 históricos (`ejecucion.log.1` … `.5`), así no crece sin límite (`RotatingFileHandler` en `helpers/logger.py`).
+
+### Formato de las líneas
+
+```
+[2026-06-06 12:00:00] [ERROR] [extractor.py:42]: [loinc:descarga] Sincronizacion fallida
+```
+
+Cada corrida de sincronización se delimita con marcadores y un `run_id` corto, y los mensajes del flujo llevan el prefijo `[catalogo:fase]` (fases: `descarga`, `comparacion`, `materializacion`, `bd`):
+
+```
+[...] [INFO] [...]: === INICIO sincronización run=a1b2c3d4 ===
+[...] [INFO] [...]: === FIN sincronización run=a1b2c3d4 ===
+```
+
+### Auditor de logs
+
+`scripts/auditor.py` lee `logs/ejecucion.log` y permite filtrar para responder rápido *"¿qué falló y cuándo?"*:
+
+```bash
+python -m scripts.auditor --nivel ERROR          # solo errores
+python -m scripts.auditor --catalogo loinc       # solo un catálogo
+python -m scripts.auditor --nivel ERROR --hoy    # errores de hoy
+python -m scripts.auditor --resumen              # qué catálogos fallaron
+```
+
+> Se ejecuta como módulo (`python -m scripts.auditor`, con puntos y sin `.py`) para que los imports del proyecto resuelvan bien.
+
+---
+
 ## Estructura del proyecto
 
 ```
 motor_archivos/
-├── .env                        # Conexión a Postgres (no versionado)
+├── .env                        # Conexión a Postgres + LOG_LEVEL + LOINC (no versionado)
+├── .env.example                # Plantilla de variables de entorno
 ├── requirements.txt
 ├── setup.sh
 │
@@ -282,11 +340,12 @@ motor_archivos/
 │   ├── parser.py               # Detección de modelo por regex + lectura de archivos
 │   ├── sanitizer.py            # Normalización de DataFrames + transformers por catálogo
 │   ├── scanner.py              # Utilidades de escaneo de directorios
-│   └── logger.py               # Logger coloreado en consola + archivo logs/ejecucion.log
+│   └── logger.py               # Logger coloreado en consola + archivo rotado logs/ejecucion.log
 │
 ├── scripts/
 │   ├── cargar_catalogos.py     # Punto de entrada — orquesta todo el proceso
-│   ├── sincronizador.py        # Descarga + comparación de hashes
+│   ├── sincronizador.py        # Descarga + comparación de hashes (marca inicio/fin de corrida)
+│   ├── auditor.py              # Audita logs/ejecucion.log (filtros por nivel/catálogo/fecha)
 │   └── pipeline.py             # ETL por archivo → bulk upsert en PostgreSQL
 │
 ├── descargas/                  # Archivos descargados (no versionados)
@@ -295,7 +354,8 @@ motor_archivos/
 │   └── *_extraido/             # Contenido extraído de ZIPs
 │
 └── logs/
-    └── ejecucion.log
+    ├── ejecucion.log           # log actual
+    └── ejecucion.log.1 … .5    # históricos rotados (5 MB c/u, máx. 5)
 ```
 
 ---

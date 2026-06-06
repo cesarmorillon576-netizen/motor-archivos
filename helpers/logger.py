@@ -2,6 +2,8 @@ import copy
 import logging
 import os
 import sys
+from logging.handlers import RotatingFileHandler
+from data.config import settings
 
 RESET = "\033[0m"
 VERDE = "\033[32m"
@@ -30,7 +32,7 @@ def configurar_logger(nombre_modulo="sires_motor"):
     if logger.hasHandlers():
         return logger
 
-    logger.setLevel(logging.INFO)
+    logger.setLevel(settings.LOG_LEVEL.upper())
 
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(ColoresConsoleFormatter())
@@ -38,7 +40,12 @@ def configurar_logger(nombre_modulo="sires_motor"):
     
     os.makedirs("logs", exist_ok=True)
 
-    file_handler = logging.FileHandler("logs/ejecucion.log", encoding="utf-8")
+    file_handler = RotatingFileHandler(
+        "logs/ejecucion.log",
+        maxBytes= 5 * 1024 * 1024,  # 10 MB
+        backupCount=5,
+        encoding="utf-8"
+    )
 
     formato_archivo = logging.Formatter(
         '[%(asctime)s] [%(levelname)s] [%(filename)s:%(lineno)d]: %(message)s',
